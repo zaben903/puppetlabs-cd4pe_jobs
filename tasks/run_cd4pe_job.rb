@@ -111,6 +111,7 @@ if __FILE__ == $0
     base_uri: File.join(params['cd4pe_web_ui_endpoint'], params['cd4pe_job_owner']),
     job_token: params['cd4pe_token'],
     ca_cert_file: ca_cert_file,
+    job_instance_id: params["job_instance_id"],
     logger: @logger
   )
   @logger.cd4pe_client = cd4pe_client
@@ -146,6 +147,7 @@ end
 #       base_uri: params['cd4pe_web_ui_endpoint'],
 #       job_token: params['cd4pe_token'],
 #       ca_cert_file: ca_cert_file,
+#       job_instance_id: params["job_instance_id"],
 #       logger: @logger
 #     )
 #     @logger.cd4pe_client = cd4pe_client

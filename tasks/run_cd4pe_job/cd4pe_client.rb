@@ -7,11 +7,13 @@ require 'json'
 class CD4PEClient
   # @param base_uri [String] Base URI of the CD4PE server
   # @param job_token [String] Job token for authentication
+  # @param job_instance_id [String] Job instance ID
   # @param logger [Logger] Logger instance for logging
   # @param ca_cert_file [String, nil] Path to CA certificate file for SSL verification
-  def initialize(base_uri:, job_token:, logger:, ca_cert_file: nil)
+  def initialize(base_uri:, job_token:, job_instance_id:, logger:, ca_cert_file: nil)
     @base_uri = URI.parse(base_uri)
     @job_token = job_token
+    @job_instance_id = job_instance_id
     @logger = logger
     @ca_cert_file = ca_cert_file
   end
@@ -38,9 +40,9 @@ class CD4PEClient
   # @param job_instance_id [String] Job instance ID
   #
   # @return [Net::HTTPResponse] HTTP response
-  def get_job_script_and_control_repo(job_instance_id)
+  def get_job_script_and_control_repo
     parameters = {
-      jobInstanceId: job_instance_id,
+      jobInstanceId: @job_instance_id,
     }
 
     get('/getJobScriptAndControlRepo', parameters)

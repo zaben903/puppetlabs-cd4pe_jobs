@@ -89,7 +89,7 @@ class CD4PEJobRunner
     target_file = File.join(@working_dir, "cd4pe_job.tar.gz")
 
     # download payload bytes
-    response = @cd4pe_client.get_job_script_and_control_repo(@job_instance_id)
+    response = @cd4pe_client.get_job_script_and_control_repo
 
     # write payload bytes to file
     begin
