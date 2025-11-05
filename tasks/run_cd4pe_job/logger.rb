@@ -42,21 +42,27 @@ class Logger
   def flush!
     return if @logs.empty?
     if @cd4pe_client.nil?
-      puts @logs.to_json
-      @logs = []
+      @mutex.synchronize do
+        puts @logs.to_json
+        @logs = []
+      end
       return
     end
 
-    @mutex.synchronize do
-      response = @cd4pe_client.send_logs(@logs)
+    begin
+      logs_to_send = nil
+      @mutex.synchronize { logs_to_send = @logs.dup}
+
+      response = @cd4pe_client.send_logs(logs_to_send)
       if (!response.is_a?(Net::HTTPSuccess))
-        @logs.push("Unable to send logs directly to CD4PE. Printing logs to std out. #{response.code} #{response.body}")
-        puts @logs.to_json
+        log "Unable to send logs directly to CD4PE. Printing logs to std out. #{response.code} #{response.body}"
+        @mutex.synchronize { puts @logs.to_json }
       end
-      @logs = []
+
+      @mutex.synchronize { @logs = [] }
     rescue => e
-      @logs.push("Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message}")
-      puts @logs.to_json
+      log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message}"
+      @mutex.synchronize { puts @logs.to_json }
     end
   end
 end
