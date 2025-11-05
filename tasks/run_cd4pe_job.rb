@@ -85,6 +85,42 @@ def blank?(str)
   str.nil? || str.empty?
 end
 
+
+# DOING TESTING BELOW
+if __FILE__ == $0
+  @logger = Logger.new
+  kernel = Facter.value(:kernel)
+  windows_job = kernel == 'windows'
+  @logger.log("System detected: #{kernel}")
+
+  params = JSON.parse(STDIN.read)
+
+  root_job_dir = File.join(Dir.pwd, 'cd4pe_job_working_dir')
+  make_dir(root_job_dir)
+  @working_dir = File.join(root_job_dir, "cd4pe_job_instance_#{params["job_instance_id"]}_#{DateTime.now.strftime('%Q')}")
+  make_dir(@working_dir)
+
+  ca_cert_file = nil
+  unless(params['base_64_ca_cert'].nil?)
+    ca_cert_file = File.join(@working_dir, "ca.crt")
+    open(ca_cert_file, "wb") do |file|
+      file.write(Base64.decode64(params['base_64_ca_cert']))
+    end
+  end
+  cd4pe_client = CD4PEClient.new(
+    base_uri: params['cd4pe_web_ui_endpoint'],
+    job_token: params['cd4pe_token'],
+    ca_cert_file: ca_cert_file,
+    logger: @logger
+  )
+  @logger.cd4pe_client = cd4pe_client
+
+  @logger.log("TESTING")
+  @logger.flush!
+  exit 1
+end
+# DOING TESTING ABOVE
+
 if __FILE__ == $0 # This block will only be invoked if this file is executed. Will NOT execute when 'required' (ie. for testing the contained classes)
   @logger = Logger.new
   begin
