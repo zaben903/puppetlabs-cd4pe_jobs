@@ -20,12 +20,12 @@ class Logger
   # @param cd4pe_client [CD4PEClient] client to send logs to CD4PE
   def cd4pe_client=(cd4pe_client)
     @cd4pe_client = cd4pe_client
-    @flush_thread = Thread.new do
-      loop do
-        sleep 1
-        flush!
-      end
-    end
+    # @flush_thread = Thread.new do
+    #   loop do
+    #     sleep 1
+    #     flush!
+    #   end
+    # end
   end
 
   # Log a new message
