@@ -106,14 +106,14 @@ class CD4PEClient
         @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
         attempts += 1
 
-        http.start
+        http.start unless http.started?
         request = case type
                   when :get
                     http.get(request_path.to_s, headers)
                   when :post
                     http.post(request_path.to_s, payload.to_json, headers)
                   else
-                    raise "cd4pe_client#request! called with invalid request type #{type}"
+                    raise StandardError, "cd4pe_client#request! called with invalid request type #{type}"
                   end
 
         case request
@@ -125,14 +125,14 @@ class CD4PEClient
             next
           end
 
-          raise request
+          raise StandardError, "Request error: #{response.code} #{response.body}"
         else
           error = "Request error: #{request.code} #{request.body}"
           @logger.log(error)
-          raise error
+          raise StandardError, error
         end
       rescue SocketError => e
-        raise "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
+        raise StandardError, "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
       rescue Net::ReadTimeout => e
         @logger.log("Timed out at #{request.read_timeout} seconds waiting for response.")
         raise e
@@ -140,7 +140,9 @@ class CD4PEClient
         @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
         raise e
       ensure
-        http.finish if http.started?
+        if attempts >= MAX_ATTEMPTS && http.started?
+          http.finish
+        end
       end
     end
   end
@@ -164,7 +166,8 @@ class CD4PEClient
   def headers
     @headers ||= {
       'Content-Type'  => 'application/json',
-      'Authorization' => @job_token
+      'Authorization' => @job_token,
+      'Accept-Encoding' => 'identity'
     }
   end
 end
