@@ -7,15 +7,16 @@ class CD4PEJobRunner
   attr_reader :container_run_args
 
   MANIFEST_TYPE = {
-    JOB: "JOB",
-    AFTER_JOB_SUCCESS: "AFTER_JOB_SUCCESS",
-    AFTER_JOB_FAILURE: "AFTER_JOB_FAILURE"
+    JOB: 'JOB',
+    AFTER_JOB_SUCCESS: 'AFTER_JOB_SUCCESS',
+    AFTER_JOB_FAILURE: 'AFTER_JOB_FAILURE'
   }.freeze
 
   DOCKER_CERTS = '/etc/docker/certs.d'
   PODMAN_CERTS = '/etc/containers/certs.d'
 
-  def initialize(working_dir:, job_owner:, job_instance_id:, logger:, secrets:, cd4pe_client:, windows_job: false, ca_cert_file: nil, container_image: nil, container_run_args: nil, image_pull_creds: nil)
+  def initialize(working_dir:, job_owner:, job_instance_id:, logger:, secrets:, cd4pe_client:, windows_job: false, ca_cert_file: nil, container_image: nil, container_run_args: nil,
+                 image_pull_creds: nil)
     @logger = logger
     @image_repo = nil
     @container_image = container_image
@@ -23,7 +24,7 @@ class CD4PEJobRunner
     @containerized_job = !blank?(container_image)
     @windows_job = windows_job
     @runtime = get_runtime
-    @cert_dir = @runtime == 'podman' ? PODMAN_CERTS : DOCKER_CERTS
+    @cert_dir = (@runtime == 'podman') ? PODMAN_CERTS : DOCKER_CERTS
     @working_dir = working_dir
     @job_owner = job_owner
     @job_instance_id = job_instance_id
@@ -31,18 +32,18 @@ class CD4PEJobRunner
     @ca_cert_file = ca_cert_file
     @cd4pe_client = cd4pe_client
 
-    job_dir_name = windows_job ? "windows" : "unix"
-    @local_jobs_dir = File.join(@working_dir, "cd4pe_job", "jobs", job_dir_name)
-    @local_repo_dir = File.join(@working_dir, "cd4pe_job", "repo")
+    job_dir_name = windows_job ? 'windows' : 'unix'
+    @local_jobs_dir = File.join(@working_dir, 'cd4pe_job', 'jobs', job_dir_name)
+    @local_repo_dir = File.join(@working_dir, 'cd4pe_job', 'repo')
 
     @image_pull_config = nil
-    if (!image_pull_creds.nil?)
+    unless image_pull_creds.nil?
       creds = Base64.decode64(image_pull_creds)
       # podman-login manpage states it uses `.docker/config.json`, so this
       # applies to both runtimes
-      @image_pull_config = File.join(@working_dir, ".docker")
+      @image_pull_config = File.join(@working_dir, '.docker')
       make_dir(@image_pull_config)
-      open(File.join(@image_pull_config, "config.json"), "wb") do |file|
+      open(File.join(@image_pull_config, 'config.json'), 'wb') do |file|
         file.write(creds)
       end
 
@@ -73,11 +74,10 @@ class CD4PEJobRunner
   def set_home_env_var
     # when the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
     # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
-    unless @windows_job
-      # if not windows, we must use a ruby solution to ensure cross-system compatibility.
-      # $HOME is set by default on windows.
-      ENV['HOME'] = Etc.getpwuid.dir
-    end
+    return if @windows_job
+    # if not windows, we must use a ruby solution to ensure cross-system compatibility.
+    # $HOME is set by default on windows.
+    ENV['HOME'] = Etc.getpwuid.dir
   end
 
   def set_repo_dir_env_var
@@ -85,15 +85,15 @@ class CD4PEJobRunner
   end
 
   def get_job_script_and_control_repo
-    @logger.log("Downloading job scripts and control repo from CD4PE.")
-    target_file = File.join(@working_dir, "cd4pe_job.tar.gz")
+    @logger.log('Downloading job scripts and control repo from CD4PE.')
+    target_file = File.join(@working_dir, 'cd4pe_job.tar.gz')
 
     # download payload bytes
     response = @cd4pe_client.get_job_script_and_control_repo
 
     # write payload bytes to file
     begin
-      open(target_file, "wb") do |file|
+      open(target_file, 'wb') do |file|
         file.write(response.body)
       end
     rescue => e
@@ -118,11 +118,11 @@ class CD4PEJobRunner
 
     result = execute_manifest(MANIFEST_TYPE[:JOB])
     combined_result = {}
-    if (result[:exit_code] == 0)
-      combined_result = on_job_complete(result, MANIFEST_TYPE[:AFTER_JOB_SUCCESS])
-    else
-      combined_result = on_job_complete(result, MANIFEST_TYPE[:AFTER_JOB_FAILURE])
-    end
+    combined_result = if result[:exit_code] == 0
+                        on_job_complete(result, MANIFEST_TYPE[:AFTER_JOB_SUCCESS])
+                      else
+                        on_job_complete(result, MANIFEST_TYPE[:AFTER_JOB_FAILURE])
+                      end
 
     @logger.log("Job instance #{@job_instance_id} run complete.")
     combined_result
@@ -137,13 +137,13 @@ class CD4PEJobRunner
 
     # if a AFTER_JOB_SUCCESS or AFTER_JOB_FAILURE script exists, run it now!
     run_followup_script = false
-    if (@windows_job)
-      run_followup_script = File.exist?(File.join(@local_jobs_dir, "#{next_manifest_type}.ps1"))
-    else
-      run_followup_script = File.exist?(File.join(@local_jobs_dir, next_manifest_type))
-    end
+    run_followup_script = if @windows_job
+                            File.exist?(File.join(@local_jobs_dir, "#{next_manifest_type}.ps1"))
+                          else
+                            File.exist?(File.join(@local_jobs_dir, next_manifest_type))
+                          end
 
-    if (run_followup_script)
+    if run_followup_script
       @logger.log("#{next_manifest_type} script specified.")
       followup_script_result = execute_manifest(next_manifest_type)
       output[next_manifest_type.downcase.to_sym] = {
@@ -158,7 +158,7 @@ class CD4PEJobRunner
   def execute_manifest(manifest_type)
     @logger.log("Executing #{manifest_type} manifest.")
     result = {}
-    if (@containerized_job)
+    if @containerized_job
       @logger.log("Container image specified. Running #{manifest_type} manifest on container image: #{@container_image}.")
       result = run_in_container(manifest_type)
     else
@@ -166,7 +166,7 @@ class CD4PEJobRunner
       result = run_with_system(manifest_type)
     end
 
-    if (result[:exit_code] == 0)
+    if result[:exit_code] == 0
       @logger.log("#{manifest_type} succeeded!")
     else
       @logger.log("#{manifest_type} failed with exit code: #{result[:exit_code]}: #{result[:message]}")
@@ -178,7 +178,7 @@ class CD4PEJobRunner
     local_job_script = File.join(@local_jobs_dir, manifest_type)
 
     cmd_to_execute = local_job_script
-    if (@windows_job)
+    if @windows_job
       cmd_to_execute = "powershell \"& {&'#{local_job_script}';exit $LASTEXITCODE}\""
     end
 
@@ -195,25 +195,23 @@ class CD4PEJobRunner
   end
 
   def update_container_image
-    if @containerized_job
-      @logger.log("Updating container image: #{@container_image}")
+    return unless @containerized_job
+    @logger.log("Updating container image: #{@container_image}")
+    result = run_system_cmd(get_image_pull_cmd)
+    if result[:exit_code] == 125
+      @logger.log('Failed to pull using given image name. Re-try directly from docker.io.')
+      @image_repo = 'docker.io'
       result = run_system_cmd(get_image_pull_cmd)
-      if (result[:exit_code] == 125)
-        @logger.log("Failed to pull using given image name. Re-try directly from docker.io.")
-        @image_repo = 'docker.io'
-        result = run_system_cmd(get_image_pull_cmd)
-      end
-
-      @logger.log(result[:message])
-
-      if (result[:exit_code] != 0)
-        @logger.log("Unable to update image #{@container_image}, falling back to local image.")
-      end
     end
+
+    @logger.log(result[:message])
+
+    return unless result[:exit_code] != 0
+    @logger.log("Unable to update image #{@container_image}, falling back to local image.")
   end
 
   def get_container_run_cmd(manifest_type)
-    suffix = @runtime == 'podman' ? ':z' : ''
+    suffix = (@runtime == 'podman') ? ':z' : ''
     repo_volume_mount = "\"#{@local_repo_dir}:/repo#{suffix}\""
     scripts_volume_mount = "\"#{@local_jobs_dir}:/cd4pe_job#{suffix}\""
     container_bash_script = "\"/cd4pe_job/#{manifest_type}\""
@@ -221,9 +219,9 @@ class CD4PEJobRunner
   end
 
   def get_container_secrets_cmd
-    return "" if @secrets.nil?
+    return '' if @secrets.nil?
 
-    @secrets.keys.reduce("") do |memo, key|
+    @secrets.keys.reduce('') do |memo, key|
       memo += "-e #{key} "
     end
   end
@@ -231,7 +229,7 @@ class CD4PEJobRunner
   def get_runtime
     return nil unless @containerized_job
 
-    if !ENV['RUNTIME_OVERRIDE'].nil?
+    unless ENV['RUNTIME_OVERRIDE'].nil?
       @logger.log("Runtime override detected. Using '#{ENV['RUNTIME_OVERRIDE']}' as runtime.")
       return ENV['RUNTIME_OVERRIDE']
     end
@@ -242,14 +240,14 @@ class CD4PEJobRunner
     begin
       result = run_system_cmd('podman --version', false)
       @logger.log("Podman runtime detected. Use 'RUNTIME_OVERRIDE' environment variable to override.")
-      return 'podman'
+      'podman'
     rescue Errno::ENOENT => e
       begin
         result = run_system_cmd('docker --version', false)
         @logger.log("Docker runtime detected. Use 'RUNTIME_OVERRIDE' environment variable to override.")
-        return 'docker'
+        'docker'
       rescue Errno::ENOENT => e
-        raise("Configured for containerized run, but no container runtime detected. Ensure docker or podman is available in the PATH.")
+        raise('Configured for containerized run, but no container runtime detected. Ensure docker or podman is available in the PATH.')
       end
     end
   end
@@ -267,25 +265,25 @@ class CD4PEJobRunner
     output, wait_thr = Open3.capture2e(cmd)
     exit_code = wait_thr.exitstatus
 
-    { :exit_code => exit_code, :message => scrub_secrets(output) }
+    { exit_code:, message: scrub_secrets(output) }
   end
 
   def scrub_secrets(cmd_output)
     return cmd_output if @secrets.nil? || @secrets.empty? || blank?(cmd_output)
 
-    @logger.log("Scrubbing secrets from job output.")
+    @logger.log('Scrubbing secrets from job output.')
 
-    redacted_value = "Sensitive [value redacted]"
+    redacted_value = 'Sensitive [value redacted]'
 
     regex = @secrets.values.map do |value|
-      sanitized = value.gsub(/\n/, " ");
-      if (sanitized == value)
+      sanitized = value.tr("\n", ' ')
+      if sanitized == value
         Regexp.quote(value)
       else
         [Regexp.quote(value), Regexp.quote(sanitized)]
       end
     end
 
-    cmd_output.gsub(/(#{regex.flatten.join("|")})/, redacted_value)
+    cmd_output.gsub(%r{(#{regex.flatten.join("|")})}, redacted_value)
   end
 end

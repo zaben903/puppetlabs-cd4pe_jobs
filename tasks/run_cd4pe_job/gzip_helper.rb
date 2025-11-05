@@ -12,15 +12,15 @@ class GZipHelper
     # helper functions
     def self.make_dir(entry, dest)
       FileUtils.rm_rf(dest) unless File.directory?(dest)
-      FileUtils.mkdir_p(dest, :mode => entry.header.mode, :verbose => false)
+      FileUtils.mkdir_p(dest, mode: entry.header.mode, verbose: false)
     end
 
     def self.make_file(entry, dest)
       FileUtils.rm_rf dest unless File.file? dest
-      File.open(dest, "wb") do |file|
+      File.open(dest, 'wb') do |file|
         file.print(entry.read)
       end
-      FileUtils.chmod(entry.header.mode, dest, :verbose => false)
+      FileUtils.chmod(entry.header.mode, dest, verbose: false)
     end
 
     def self.preserve_symlink(entry, dest)
@@ -28,7 +28,7 @@ class GZipHelper
     end
 
     # Unzip tar.gz
-    Gem::Package::TarReader.new( Zlib::GzipReader.open zipped_file_path ) do |tar|
+    Gem::Package::TarReader.new(Zlib::GzipReader.open(zipped_file_path)) do |tar|
       dest = nil
       tar.each do |entry|
         # skip 'PaxHeaders.X' entries as they interfere with the TAR_LONGLINK logic
@@ -45,17 +45,17 @@ class GZipHelper
 
         # If the destination has not yet been set
         # set it equal to the path + file/dir name
-        if (dest.nil?)
+        if dest.nil?
           dest = File.join(destination_path, entry.full_name)
         end
 
         # Write the file or dir
         if entry.directory?
-          self.make_dir(entry, dest)
+          make_dir(entry, dest)
         elsif entry.file?
-          self.make_file(entry, dest)
+          make_file(entry, dest)
         elsif entry.header.typeflag == SYMLINK_SYMBOL
-          self.preserve_symlink(entry, dest)
+          preserve_symlink(entry, dest)
         end
 
         # reset dest for next entry iteration

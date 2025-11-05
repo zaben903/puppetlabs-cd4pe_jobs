@@ -50,7 +50,7 @@ class Logger
 
     begin
       logs_to_send = nil
-      @mutex.synchronize { logs_to_send = @logs.dup}
+      @mutex.synchronize { logs_to_send = @logs.dup }
 
       response = @cd4pe_client.send_logs(logs_to_send)
       unless response.is_a?(Net::HTTPSuccess)
@@ -60,11 +60,11 @@ class Logger
 
       @mutex.synchronize do
         # Some logs may have been added since we copied them
-        if logs_to_send.length <= @logs.length
-          @logs = @logs[logs_to_send.length..-1]
-        else
-          @logs = []
-        end
+        @logs = if logs_to_send.length <= @logs.length
+                  @logs[logs_to_send.length..-1]
+                else
+                  []
+                end
       end
     rescue => e
       log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message} Backtrace: #{e.backtrace}"

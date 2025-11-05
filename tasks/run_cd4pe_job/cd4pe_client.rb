@@ -80,7 +80,7 @@ class CD4PEClient
     if @base_uri.scheme == 'https'
       @http.use_ssl = true
       @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      if !@ca_cert_file.nil?
+      unless @ca_cert_file.nil?
         store = OpenSSL::X509::Store.new
         store.set_default_paths
         store.add_file(@ca_cert_file)
@@ -154,9 +154,9 @@ class CD4PEClient
   def get_timeout
     timeout = 600
     timeout_env_var = ENV['HTTP_READ_TIMEOUT_SECONDS']
-    unless (timeout_env_var.nil?)
+    unless timeout_env_var.nil?
       timeout_override = timeout_env_var.to_i
-      if (timeout_override != 0)
+      if timeout_override != 0
         timeout = timeout_override
       else
         @logger.log("Unable to use HTTP_READ_TIMEOUT_SECONDS override: #{timeout_env_var}. Must be integer and non-zero.")
