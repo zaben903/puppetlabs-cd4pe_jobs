@@ -35,16 +35,15 @@ class CD4PEClient
 
   # Get job script and control repository
   #
-  # @param job_owner [String] Owner of the job
   # @param job_instance_id [String] Job instance ID
   #
   # @return [Net::HTTPResponse] HTTP response
-  def get_job_script_and_control_repo(job_owner:, job_instance_id:)
+  def get_job_script_and_control_repo(job_instance_id)
     parameters = {
       jobInstanceId: job_instance_id,
     }
 
-    get(File.join(job_owner, 'getJobScriptAndControlRepo'), parameters)
+    get('/getJobScriptAndControlRepo', parameters)
   end
 
   private
@@ -98,7 +97,7 @@ class CD4PEClient
   #
   # @return [Net::HTTPResponse] HTTP response
   def request!(type, path, payload = {})
-    request_path = @base_uri.merge(path)
+    request_path = URI.parse("#{@base_uri.to_s.delete_suffix('/')}#{path}")
     attempts = 0
     while attempts < MAX_ATTEMPTS
       begin
@@ -106,9 +105,9 @@ class CD4PEClient
         attempts += 1
         request = case type
                   when :get
-                    http.get(request_path.request_uri, headers)
+                    http.get(request_path.to_s, headers)
                   when :post
-                    http.post(request_path.request_uri, payload.to_json, headers)
+                    http.post(request_path.to_s, payload.to_json, headers)
                   else
                     raise "cd4pe_client#request! called with invalid request type #{type}"
                   end
