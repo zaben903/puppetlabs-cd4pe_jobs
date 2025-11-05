@@ -47,5 +47,5 @@
     }
   },
   "input_method": "stdin",
-  "files": ["run_cd4pe_job"]
+  "files": ["cd4pe_jobs/tasks/run_cd4pe_job/"]
 }
