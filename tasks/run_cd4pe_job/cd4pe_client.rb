@@ -105,6 +105,8 @@ class CD4PEClient
       begin
         @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
         attempts += 1
+
+        http.start
         request = case type
                   when :get
                     http.get(request_path.to_s, headers)
@@ -137,6 +139,8 @@ class CD4PEClient
       rescue StandardError => e
         @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
         raise e
+      ensure
+        http.finish if http.started?
       end
     end
   end
