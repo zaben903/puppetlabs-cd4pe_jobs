@@ -30,7 +30,7 @@ class CD4PEClient
       },
     }
 
-    post('/ajax', payload)
+    post('/ajax'), payload)
   end
 
   # Get job script and control repository
