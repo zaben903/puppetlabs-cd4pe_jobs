@@ -2,7 +2,7 @@ require 'open3'
 require 'base64'
 require 'json'
 require 'fileutils'
-require_relative '../tasks/run_cd4pe_job.rb'
+require_relative '../../tasks/run_cd4pe_job.rb'
 
 describe 'run_cd4pe_job' do
   before(:all) do
@@ -27,6 +27,7 @@ describe 'run_cd4pe_job' do
       secret2: "friend",
     }
     @windows_job = ENV['RUN_WINDOWS_UNIT_TESTS']
+    @cd4pe_client = nil
   end
 
   after(:each) do
@@ -37,7 +38,7 @@ describe 'run_cd4pe_job' do
   describe 'cd4pe_job_helper::get_runtime' do
     it 'Detects docker as the available runtime.' do
       test_container_image = 'puppetlabs/test:10.0.1'
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       expect(job_helper.get_runtime).to eq('docker')
     end
   end
@@ -45,7 +46,7 @@ describe 'run_cd4pe_job' do
   describe 'cd4pe_job_helper::update_container_image' do
     let(:test_container_image) { 'puppetlabs/test:10.0.1' }
     it 'Generates a docker pull command.' do
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       docker_pull_command = job_helper.get_image_pull_cmd
       expect(docker_pull_command).to eq("docker pull #{test_container_image}")
     end
@@ -58,21 +59,13 @@ describe 'run_cd4pe_job' do
       let(:cert_b64) { Base64.encode64(cert_txt) }
 
       it 'Uses config when present for docker.' do
-        job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, image_pull_creds: creds_b64, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+        job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, image_pull_creds: creds_b64, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
         config_json = File.join(@working_dir, '.docker', 'config.json')
         expect(File.exist?(config_json)).to be(true)
         expect(File.read(config_json)).to eq(creds_json)
 
         docker_pull_command = job_helper.get_image_pull_cmd
         expect(docker_pull_command).to eq("docker --config #{File.join(@working_dir, '.docker')} pull #{test_container_image}")
-      end
-
-      it 'Registers the CA cert when provided.' do
-        job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, image_pull_creds: creds_b64, base_64_ca_cert: cert_b64, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
-
-        cert_file = File.join(@certs_dir, hostname, 'ca.crt')
-        expect(File.exist?(cert_file)).to be(true)
-        expect(File.read(cert_file)).to eq(cert_txt)
       end
     end
   end
@@ -87,7 +80,7 @@ describe 'run_cd4pe_job' do
       user_specified_container_run_args = [arg1, arg2, arg3]
       job_type = 'unix'
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, container_run_args: user_specified_container_run_args, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, container_run_args: user_specified_container_run_args, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
       docker_run_command = job_helper.get_container_run_cmd(test_manifest_type)
       cmd_parts = docker_run_command.split(' ')

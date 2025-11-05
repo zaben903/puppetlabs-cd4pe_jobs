@@ -8,7 +8,6 @@ require 'net/http'
 #
 # @attr_reader logs [Array<Hash<Symbol => String>>] logs that haven't been flushed yet
 class Logger
-  attr_writer :cd4pe_client
   attr_reader :logs
 
   # @param cd4pe_client [CD4PEClient, nil] client to send logs to CD4PE

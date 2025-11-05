@@ -2,7 +2,7 @@ require 'open3'
 require 'base64'
 require 'json'
 require 'fileutils'
-require_relative '../tasks/run_cd4pe_job.rb'
+require_relative '../../tasks/run_cd4pe_job.rb'
 
 describe 'run_cd4pe_job' do
   before(:all) do
@@ -27,6 +27,7 @@ describe 'run_cd4pe_job' do
       secret2: "friend",
     }
     @windows_job = ENV['RUN_WINDOWS_UNIT_TESTS']
+    @cd4pe_client = nil
   end
 
   after(:each) do
@@ -145,13 +146,13 @@ describe 'run_cd4pe_job' do
       arg3 = '--whatever=isclever'
       user_specified_container_run_args = [arg1, arg2, arg3]
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_run_args: user_specified_container_run_args, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_run_args: user_specified_container_run_args, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
       expect(job_helper.container_run_args).to eq("#{arg1} #{arg2} #{arg3}")
     end
 
     it 'Sets the HOME and REPO_DIR env vars' do
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
       expect(ENV['HOME'] != nil).to be(true)
       expect(ENV['REPO_DIR']).to eq("#{@working_dir}/cd4pe_job/repo")
@@ -205,7 +206,7 @@ describe 'cd4pe_job_helper::run_job' do
     File.write(@job_script, "echo \"#{expected_output}\"")
     File.write(@after_job_success_script, "echo \"#{after_job_success_message}\"")
 
-    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
     output = job_helper.run_job
 
     expect(output[:job][:exit_code]).to eq(0)
@@ -223,7 +224,7 @@ describe 'cd4pe_job_helper::run_job' do
       File.write(@job_script, "$ErrorActionPreference = 'Stop'; this command does not exist")
       File.write(@after_job_failure_script, "echo \"#{after_job_failure_message}\"")
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       output = job_helper.run_job
 
       expect(output[:job][:exit_code]).to eq(1)
@@ -235,7 +236,7 @@ describe 'cd4pe_job_helper::run_job' do
       File.write(@job_script, "this command does not exist")
       File.write(@after_job_failure_script, "echo \"#{after_job_failure_message}\"")
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       output = job_helper.run_job
 
       expect(output[:job][:exit_code]).to eq(127)
@@ -250,7 +251,7 @@ describe 'cd4pe_job_helper::run_job' do
   it 'Fails the job if the job script fails' do
     File.write(@job_script, "exit 1;")
 
-    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_token: @job_token, web_ui_endpoint: @web_ui_endpoint, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets)
+    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
     output = job_helper.run_job
 
     expect(output[:job][:exit_code]).to eq(1)
