@@ -56,7 +56,7 @@ class CD4PEJobRunner
           cert = File.join(dir, 'ca.crt')
           begin
             FileUtils.ln_s(@ca_cert_file, cert, force: true)
-          rescue Errno::EEXIST => e
+          rescue Errno::EEXIST
             # FileUtils.link with force=true deletes the file before linking. That leaves a race
             # condition where two calls to FileUtils.link try to link after the file has been
             # deleted. One will error with EEXIST, which shouldn't be an issue - presumably both
@@ -117,7 +117,6 @@ class CD4PEJobRunner
     @logger.log("Running job instance #{@job_instance_id}.")
 
     result = execute_manifest(MANIFEST_TYPE[:JOB])
-    combined_result = {}
     combined_result = if result[:exit_code] == 0
                         on_job_complete(result, MANIFEST_TYPE[:AFTER_JOB_SUCCESS])
                       else
@@ -136,7 +135,6 @@ class CD4PEJobRunner
     }
 
     # if a AFTER_JOB_SUCCESS or AFTER_JOB_FAILURE script exists, run it now!
-    run_followup_script = false
     run_followup_script = if @windows_job
                             File.exist?(File.join(@local_jobs_dir, "#{next_manifest_type}.ps1"))
                           else
@@ -238,15 +236,15 @@ class CD4PEJobRunner
     # shim is installed. If the shim is present, we will find podman first and use it
     # directly.
     begin
-      result = run_system_cmd('podman --version', false)
+      run_system_cmd('podman --version', false)
       @logger.log("Podman runtime detected. Use 'RUNTIME_OVERRIDE' environment variable to override.")
       'podman'
-    rescue Errno::ENOENT => e
+    rescue Errno::ENOENT
       begin
-        result = run_system_cmd('docker --version', false)
+        run_system_cmd('docker --version', false)
         @logger.log("Docker runtime detected. Use 'RUNTIME_OVERRIDE' environment variable to override.")
         'docker'
-      rescue Errno::ENOENT => e
+      rescue Errno::ENOENT
         raise('Configured for containerized run, but no container runtime detected. Ensure docker or podman is available in the PATH.')
       end
     end
@@ -258,9 +256,6 @@ class CD4PEJobRunner
   end
 
   def run_system_cmd(cmd, log_output = true)
-    output = ''
-    exit_code = 0
-
     @logger.log("Executing system command: #{cmd}") unless !log_output
     output, wait_thr = Open3.capture2e(cmd)
     exit_code = wait_thr.exitstatus
