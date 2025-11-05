@@ -54,14 +54,14 @@ class Logger
       @mutex.synchronize { logs_to_send = @logs.dup}
 
       response = @cd4pe_client.send_logs(logs_to_send)
-      if (!response.is_a?(Net::HTTPSuccess))
+      unless response.is_a?(Net::HTTPSuccess)
         log "Unable to send logs directly to CD4PE. Printing logs to std out. #{response.code} #{response.body}"
         @mutex.synchronize { puts @logs.to_json }
       end
 
       @mutex.synchronize { @logs = [] }
     rescue => e
-      log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message}"
+      log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message} Backtrace: #{e.backtrace}"
       @mutex.synchronize { puts @logs.to_json }
     end
   end
