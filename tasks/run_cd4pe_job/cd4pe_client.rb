@@ -127,7 +127,7 @@ class CD4PEClient
             next
           end
 
-          raise StandardError, "Request error: #{response.code} #{response.body}"
+          raise StandardError, "Request error: #{request.code} #{request.body}"
         else
           error = "Request error: #{request.code} #{request.body}"
           @logger.log(error)
