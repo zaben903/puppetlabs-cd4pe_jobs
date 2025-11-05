@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'rubygems/package'
+
 class GZipHelper
   # static class to decompress tar.gz files
   TAR_LONGLINK = '././@LongLink'

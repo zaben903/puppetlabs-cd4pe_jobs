@@ -2,12 +2,10 @@
 # frozen_string_literal: true
 
 require 'json'
-require 'rubygems/package'
 require 'open3'
 require 'base64'
 require 'facter'
 require 'date'
-require 'etc'
 
 require_relative 'run_cd4pe_job/logger'
 require_relative 'run_cd4pe_job/gzip_helper'
@@ -141,7 +139,20 @@ if __FILE__ == $0 # This block will only be invoked if this file is executed. Wi
     # Write to stderr because cd4pe_client may not be setup and send_logs captures the error.
     STDERR.puts(e.message)
     STDERR.puts(e.backtrace)
-    cd4pe_client.send_logs({ status: 'failure', error: e.message, logs: @logger.get_logs })
+    if defined?(@cd4pe_client) && !@cd4pe_client.nil?
+      @logger.flush!
+      payload = {
+        status: 'failure',
+        error: e.message,
+      }
+    else
+      payload = {
+        status: 'failure',
+        error: e.message,
+        logs: @logger.logs
+      }
+    end
+    cd4pe_client.send_logs(payload)
     exit 1
   ensure
     delete_dir(@working_dir)

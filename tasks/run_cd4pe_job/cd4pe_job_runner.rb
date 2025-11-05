@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'etc'
+
 # Class for downloading, running, and logging CD4PE jobs
 class CD4PEJobRunner
   attr_reader :container_run_args
