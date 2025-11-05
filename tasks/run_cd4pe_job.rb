@@ -85,114 +85,77 @@ def blank?(str)
   str.nil? || str.empty?
 end
 
-
-# DOING TESTING BELOW
-if __FILE__ == $0
+if __FILE__ == $0 # This block will only be invoked if this file is executed. Will NOT execute when 'required' (ie. for testing the contained classes)
   @logger = Logger.new
-  kernel = Facter.value(:kernel)
-  windows_job = kernel == 'windows'
-  @logger.log("System detected: #{kernel}")
+  begin
+    kernel = Facter.value(:kernel)
+    windows_job = kernel == 'windows'
+    @logger.log("System detected: #{kernel}")
 
-  params = JSON.parse(STDIN.read)
+    params = JSON.parse(STDIN.read)
 
-  root_job_dir = File.join(Dir.pwd, 'cd4pe_job_working_dir')
-  make_dir(root_job_dir)
-  @working_dir = File.join(root_job_dir, "cd4pe_job_instance_#{params["job_instance_id"]}_#{DateTime.now.strftime('%Q')}")
-  make_dir(@working_dir)
+    root_job_dir = File.join(Dir.pwd, 'cd4pe_job_working_dir')
+    make_dir(root_job_dir)
+    @working_dir = File.join(root_job_dir, "cd4pe_job_instance_#{params["job_instance_id"]}_#{DateTime.now.strftime('%Q')}")
+    make_dir(@working_dir)
 
-  ca_cert_file = nil
-  unless(params['base_64_ca_cert'].nil?)
-    ca_cert_file = File.join(@working_dir, "ca.crt")
-    open(ca_cert_file, "wb") do |file|
-      file.write(Base64.decode64(params['base_64_ca_cert']))
+    ca_cert_file = nil
+    unless(params['base_64_ca_cert'].nil?)
+      ca_cert_file = File.join(@working_dir, "ca.crt")
+      open(ca_cert_file, "wb") do |file|
+        file.write(Base64.decode64(params['base_64_ca_cert']))
+      end
     end
+    cd4pe_client = CD4PEClient.new(
+      base_uri: File.join(params['cd4pe_web_ui_endpoint'], params['cd4pe_job_owner']),
+      job_token: params['cd4pe_token'],
+      ca_cert_file: ca_cert_file,
+      job_instance_id: params["job_instance_id"],
+      logger: @logger
+    )
+    @logger.cd4pe_client = cd4pe_client
+    set_job_env_vars(params)
+    set_job_env_secrets(params['secrets'])
+
+    job_runner = CD4PEJobRunner.new(
+      working_dir: @working_dir,
+      container_image: params['docker_image'],
+      container_run_args: params["docker_run_args"],
+      image_pull_creds: params['docker_pull_creds'],
+      job_owner: params['cd4pe_job_owner'],
+      job_instance_id: params["job_instance_id"],
+      ca_cert_file: ca_cert_file,
+      windows_job: windows_job,
+      secrets: params['secrets'],
+      cd4pe_client: cd4pe_client,
+      logger: @logger)
+    job_runner.get_job_script_and_control_repo
+    job_runner.update_container_image
+    output = job_runner.run_job
+
+    @logger.flush!
+
+    exit get_combined_exit_code(output)
+  rescue StandardError => e
+    # Write to stderr because cd4pe_client may not be setup and send_logs captures the error.
+    STDERR.puts(e.message)
+    STDERR.puts(e.backtrace)
+    if defined?(@cd4pe_client) && !@cd4pe_client.nil?
+      @logger.flush!
+      payload = {
+        status: 'failure',
+        error: e.message,
+      }
+    else
+      payload = {
+        status: 'failure',
+        error: e.message,
+        logs: @logger.logs
+      }
+    end
+    cd4pe_client.send_logs(payload)
+    exit 1
+  ensure
+    delete_dir(@working_dir)
   end
-  cd4pe_client = CD4PEClient.new(
-    base_uri: File.join(params['cd4pe_web_ui_endpoint'], params['cd4pe_job_owner']),
-    job_token: params['cd4pe_token'],
-    ca_cert_file: ca_cert_file,
-    job_instance_id: params["job_instance_id"],
-    logger: @logger
-  )
-  @logger.cd4pe_client = cd4pe_client
-
-  @logger.log("TESTING")
-  @logger.flush!
-  exit 1
 end
-# DOING TESTING ABOVE
-
-# if __FILE__ == $0 # This block will only be invoked if this file is executed. Will NOT execute when 'required' (ie. for testing the contained classes)
-#   @logger = Logger.new
-#   begin
-#     kernel = Facter.value(:kernel)
-#     windows_job = kernel == 'windows'
-#     @logger.log("System detected: #{kernel}")
-
-#     params = JSON.parse(STDIN.read)
-
-#     root_job_dir = File.join(Dir.pwd, 'cd4pe_job_working_dir')
-#     make_dir(root_job_dir)
-#     @working_dir = File.join(root_job_dir, "cd4pe_job_instance_#{params["job_instance_id"]}_#{DateTime.now.strftime('%Q')}")
-#     make_dir(@working_dir)
-
-#     ca_cert_file = nil
-#     unless(params['base_64_ca_cert'].nil?)
-#       ca_cert_file = File.join(@working_dir, "ca.crt")
-#       open(ca_cert_file, "wb") do |file|
-#         file.write(Base64.decode64(params['base_64_ca_cert']))
-#       end
-#     end
-#     cd4pe_client = CD4PEClient.new(
-#       base_uri: params['cd4pe_web_ui_endpoint'],
-#       job_token: params['cd4pe_token'],
-#       ca_cert_file: ca_cert_file,
-#       job_instance_id: params["job_instance_id"],
-#       logger: @logger
-#     )
-#     @logger.cd4pe_client = cd4pe_client
-#     set_job_env_vars(params)
-#     set_job_env_secrets(params['secrets'])
-
-#     job_runner = CD4PEJobRunner.new(
-#       working_dir: @working_dir,
-#       container_image: params['docker_image'],
-#       container_run_args: params["docker_run_args"],
-#       image_pull_creds: params['docker_pull_creds'],
-#       job_owner: params['cd4pe_job_owner'],
-#       job_instance_id: params["job_instance_id"],
-#       ca_cert_file: ca_cert_file,
-#       windows_job: windows_job,
-#       secrets: params['secrets'],
-#       cd4pe_client: cd4pe_client,
-#       logger: @logger)
-#     job_runner.get_job_script_and_control_repo
-#     job_runner.update_container_image
-#     output = job_runner.run_job
-
-#     @logger.flush!
-
-#     exit get_combined_exit_code(output)
-#   rescue StandardError => e
-#     # Write to stderr because cd4pe_client may not be setup and send_logs captures the error.
-#     STDERR.puts(e.message)
-#     STDERR.puts(e.backtrace)
-#     if defined?(@cd4pe_client) && !@cd4pe_client.nil?
-#       @logger.flush!
-#       payload = {
-#         status: 'failure',
-#         error: e.message,
-#       }
-#     else
-#       payload = {
-#         status: 'failure',
-#         error: e.message,
-#         logs: @logger.logs
-#       }
-#     end
-#     cd4pe_client.send_logs(payload)
-#     exit 1
-#   ensure
-#     delete_dir(@working_dir)
-#   end
-# end

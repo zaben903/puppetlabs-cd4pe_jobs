@@ -23,7 +23,7 @@ class Logger
     @cd4pe_client = cd4pe_client
     @flush_thread = Thread.new do
       loop do
-        sleep 10
+        sleep 1
         flush!
       end
     end
@@ -59,7 +59,14 @@ class Logger
         @mutex.synchronize { puts @logs.to_json }
       end
 
-      @mutex.synchronize { @logs = [] }
+      @mutex.synchronize do
+        # Some logs may have been added since we copied them
+        if logs_to_send.length <= @logs.length
+          @logs = @logs[logs_to_send.length..-1]
+        else
+          @logs = []
+        end
+      end
     rescue => e
       log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message} Backtrace: #{e.backtrace}"
       @mutex.synchronize { puts @logs.to_json }
