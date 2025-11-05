@@ -101,38 +101,38 @@ class CD4PEClient
     request_path = @base_uri.merge(path)
     attempts = 0
     while attempts < MAX_ATTEMPTS
-      @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
-      attempts += 1
-      request = case type
-                when :get
-                  http.get(request_path.request_uri, headers)
-                when :post
-                  http.post(request_path.request_uri, payload.to_json, headers)
-                else
-                  raise "cd4pe_client#request! called with invalid request type #{type}"
-                end
+      begin
+        @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
+        attempts += 1
+        request = case type
+                  when :get
+                    http.get(request_path.request_uri, headers)
+                  when :post
+                    http.post(request_path.request_uri, payload.to_json, headers)
+                  else
+                    raise "cd4pe_client#request! called with invalid request type #{type}"
+                  end
 
-      case request
-      when Net::HTTPSuccess
-        return request
-      when Net::HTTPInternalServerError => e
-        if attempts < MAX_ATTEMPTS
-          sleep(3)
-          next
+        case request
+        when Net::HTTPSuccess
+          return request
+        when Net::HTTPInternalServerError
+          if attempts < MAX_ATTEMPTS
+            sleep(3)
+            next
+          end
+
+          raise request
         end
-
+      rescue SocketError => e
+        raise "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
+      rescue Net::ReadTimeout => e
+        @logger.log("Timed out at #{request.read_timeout} seconds waiting for response.")
         raise e
-      when StandardError => e
+      rescue StandardError => e
+        @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
         raise e
       end
-    rescue SocketError => e
-      raise "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
-    rescue Net::ReadTimeout => e
-      @logger.log("Timed out at #{request.read_timeout} seconds waiting for response.")
-      raise e
-    rescue StandardError => e
-      @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
-      raise e
     end
   end
 
