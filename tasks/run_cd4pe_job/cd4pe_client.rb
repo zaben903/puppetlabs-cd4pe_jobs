@@ -99,10 +99,12 @@ class CD4PEClient
   #
   # @return [Net::HTTPResponse] HTTP response
   def request!(type, path, payload = {})
+    @request_mutex ||= Mutex.new
     request_path = URI.parse("#{@base_uri.to_s.delete_suffix('/')}#{path}")
     attempts = 0
     while attempts < MAX_ATTEMPTS
       begin
+        @request_mutex.lock
         @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
         attempts += 1
 
@@ -132,7 +134,7 @@ class CD4PEClient
           raise StandardError, error
         end
       rescue SocketError => e
-        raise StandardError, "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
+        raise StandardError, "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}"
       rescue Net::ReadTimeout => e
         @logger.log("Timed out at #{request.read_timeout} seconds waiting for response.")
         raise e
@@ -143,6 +145,7 @@ class CD4PEClient
         if attempts >= MAX_ATTEMPTS && http.started?
           http.finish
         end
+        @request_mutex.unlock
       end
     end
   end
