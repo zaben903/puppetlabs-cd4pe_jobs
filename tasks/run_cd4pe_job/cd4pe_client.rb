@@ -113,7 +113,7 @@ class CD4PEClient
                   end
 
         case request
-        when Net::HTTPSuccess
+        when Net::HTTPSuccess, Net::HTTPRedirection
           return request
         when Net::HTTPInternalServerError
           if attempts < MAX_ATTEMPTS
@@ -122,6 +122,10 @@ class CD4PEClient
           end
 
           raise request
+        else
+          error = "Request error: #{request.code} #{request.body}"
+          @logger.log(error)
+          raise error
         end
       rescue SocketError => e
         raise "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}", e.backtrace
