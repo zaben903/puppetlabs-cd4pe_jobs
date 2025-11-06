@@ -133,6 +133,8 @@ if __FILE__ == $0 # This block will only be invoked if this file is executed. Wi
     job_runner.update_container_image
     output = job_runner.run_job
 
+    @logger.log('FORCING LOGS DUMP TO STDOUT')
+    puts @logger.logs.to_json
     @logger.flush!
 
     exit get_combined_exit_code(output)
