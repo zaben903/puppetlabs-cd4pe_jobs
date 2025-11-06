@@ -133,8 +133,8 @@ if __FILE__ == $0 # This block will only be invoked if this file is executed. Wi
     job_runner.update_container_image
     output = job_runner.run_job
 
+    output[:logs] = @logger.logs
     cd4pe_client.send_job_output(output)
-    @logger.flush!
 
     exit get_combined_exit_code(output)
   rescue StandardError => e
