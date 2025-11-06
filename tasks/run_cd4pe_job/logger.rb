@@ -12,10 +12,8 @@ class Logger
   attr_reader :logs
   attr_writer :cd4pe_client
 
-  # @param cd4pe_client [CD4PEClient, nil] client to send logs to CD4PE
-  def initialize(cd4pe_client: nil)
+  def initialize
     @logs = []
-    self.cd4pe_client = cd4pe_client unless cd4pe_client.nil?
   end
 
   # Log a new message
@@ -42,12 +40,7 @@ class Logger
         puts @logs.to_json
       end
 
-      # Some logs may have been added since we copied them
-      @logs = if logs_to_send.length <= @logs.length
-                @logs[logs_to_send.length..-1]
-              else
-                []
-              end
+      @logs = []
     rescue StandardError => e
       log "Problem sending logs to CD4PE. Printing logs to std out. Error message: #{e.message} Backtrace: #{e.backtrace}"
       puts @logs.to_json

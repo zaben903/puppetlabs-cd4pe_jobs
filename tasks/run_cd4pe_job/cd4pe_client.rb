@@ -109,7 +109,7 @@ class CD4PEClient
         http.start unless http.started?
         request = case type
                   when :get
-                    http.get(request_path.to_s, headers)
+                    http.get_response(request_path.to_s, headers)
                   when :post
                     http.post(request_path.to_s, payload.to_json, headers)
                   else
@@ -118,6 +118,7 @@ class CD4PEClient
 
         case request
         when Net::HTTPSuccess, Net::HTTPRedirection
+          http.finish
           return request
         when Net::HTTPInternalServerError
           if attempts < MAX_ATTEMPTS
@@ -167,7 +168,6 @@ class CD4PEClient
     @headers ||= {
       'Content-Type'  => 'application/json',
       'Authorization' => @job_token
-      # 'Accept-Encoding' => 'identity'
     }
   end
 end
