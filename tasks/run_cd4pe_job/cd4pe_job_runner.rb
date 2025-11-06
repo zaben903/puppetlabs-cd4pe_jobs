@@ -75,20 +75,6 @@ module RunCD4PEJob
       set_repo_dir_env_var
     end
 
-    # When the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
-    # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
-    def set_home_env_var
-      return if @windows_job
-      # if not windows, we must use a ruby solution to ensure cross-system compatibility.
-      # $HOME is set by default on windows.
-      ENV['HOME'] = Etc.getpwuid.dir
-    end
-
-    # Set REPO_DIR env var to point to the local control repo dir
-    def set_repo_dir_env_var
-      ENV['REPO_DIR'] = @local_repo_dir
-    end
-
     # Download job script and control repo from CD4PE and unzip to working dir
     #
     # @return [String] path to the downloaded tar.gz file
@@ -121,6 +107,24 @@ module RunCD4PEJob
       target_file
     end
 
+    # Update the container image
+    def update_container_image
+      return unless @containerized_job
+
+      @logger.log("Updating container image: #{@container_image}")
+      result = run_system_cmd(get_image_pull_cmd)
+      if result[:exit_code] == 125
+        @logger.log('Failed to pull using given image name. Re-try directly from docker.io.')
+        @image_repo = 'docker.io'
+        result = run_system_cmd(get_image_pull_cmd)
+      end
+
+      @logger.log(result[:message])
+
+      return unless result[:exit_code] != 0
+      @logger.log("Unable to update image #{@container_image}, falling back to local image.")
+    end
+
     # Run the job manifest
     #
     # @return [Hash<Symbol => String>]
@@ -136,6 +140,22 @@ module RunCD4PEJob
 
       @logger.log("Job instance #{@job_instance_id} run complete.")
       combined_result
+    end
+
+    private
+
+    # When the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
+    # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
+    def set_home_env_var
+      return if @windows_job
+      # if not windows, we must use a ruby solution to ensure cross-system compatibility.
+      # $HOME is set by default on windows.
+      ENV['HOME'] = Etc.getpwuid.dir
+    end
+
+    # Set REPO_DIR env var to point to the local control repo dir
+    def set_repo_dir_env_var
+      ENV['REPO_DIR'] = @local_repo_dir
     end
 
     # Combined result of job and follow-up script (if any)
@@ -211,22 +231,6 @@ module RunCD4PEJob
       else
         "#{@runtime} --config #{@image_pull_config} pull #{image}"
       end
-    end
-
-    def update_container_image
-      return unless @containerized_job
-      @logger.log("Updating container image: #{@container_image}")
-      result = run_system_cmd(get_image_pull_cmd)
-      if result[:exit_code] == 125
-        @logger.log('Failed to pull using given image name. Re-try directly from docker.io.')
-        @image_repo = 'docker.io'
-        result = run_system_cmd(get_image_pull_cmd)
-      end
-
-      @logger.log(result[:message])
-
-      return unless result[:exit_code] != 0
-      @logger.log("Unable to update image #{@container_image}, falling back to local image.")
     end
 
     # Generates the container run command

@@ -40,7 +40,7 @@ describe 'run_cd4pe_job' do
       test_container_image = 'puppetlabs/test:10.0.1'
       job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
 logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
-      expect(job_helper.get_runtime).to eq('podman')
+      expect(job_helper.send(:get_runtime)).to eq('podman')
     end
   end
 
@@ -50,7 +50,7 @@ logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
     it 'Generates a podman pull command.' do
       job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
 logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
-      podman_pull_command = job_helper.get_image_pull_cmd
+      podman_pull_command = job_helper.send(:get_image_pull_cmd)
       expect(podman_pull_command).to eq("podman pull #{test_container_image}")
     end
 
@@ -68,7 +68,7 @@ job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_cli
         expect(File.exist?(config_json)).to be(true)
         expect(File.read(config_json)).to eq(creds_json)
 
-        podman_pull_command = job_helper.get_image_pull_cmd
+        podman_pull_command = job_helper.send(:get_image_pull_cmd)
         expect(podman_pull_command).to eq("podman --config #{File.join(@working_dir, '.docker')} pull #{test_container_image}")
       end
     end
@@ -87,7 +87,7 @@ job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_cli
       job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, container_run_args: user_specified_container_run_args,
 job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
-      podman_run_command = job_helper.get_container_run_cmd(test_manifest_type)
+      podman_run_command = job_helper.send(:get_container_run_cmd, test_manifest_type)
       cmd_parts = podman_run_command.split(' ')
 
       expect(cmd_parts[0]).to eq('podman')

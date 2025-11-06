@@ -5,10 +5,6 @@ require 'rubygems/package'
 module RunCD4PEJob
   # Class to decompress tar.gz files
   class GZipHelper
-    TAR_LONGLINK = '././@LongLink'
-    SYMLINK_SYMBOL = '2'
-    PAX_HEADER = 'x'
-
     # Unzip tar.gz
     #
     # @param zipped_file_path [String] path to the tar.gz file
@@ -57,5 +53,11 @@ module RunCD4PEJob
         end
       end
     end
+
+    private
+
+    TAR_LONGLINK = '././@LongLink'
+    SYMLINK_SYMBOL = '2'
+    PAX_HEADER = 'x'
   end
 end

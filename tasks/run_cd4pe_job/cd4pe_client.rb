@@ -80,7 +80,7 @@ module RunCD4PEJob
     #
     # @return [Net::HTTPResponse]
     def request!(type, path, payload = {})
-      request_path = URI.parse("#{@base_uri.to_s.delete_suffix('/')}#{path}")
+      request_path = URI.parse(File.join(@base_uri.to_s, path))
       attempts = 0
       while attempts < MAX_ATTEMPTS
         @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http_args[:read_timeout]} seconds")
