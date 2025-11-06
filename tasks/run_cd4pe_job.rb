@@ -140,20 +140,12 @@ if __FILE__ == $0 # This block will only be invoked if this file is executed. Wi
     # Write to stderr because cd4pe_client may not be setup and send_logs captures the error.
     STDERR.puts(e.message)
     STDERR.puts(e.backtrace)
-    if defined?(@cd4pe_client) && !@cd4pe_client.nil?
-      @logger.flush!
-      payload = {
-        status: 'failure',
-        error: e.message,
-      }
-    else
-      payload = {
-        status: 'failure',
-        error: e.message,
-        logs: @logger.logs
-      }
-    end
-    cd4pe_client.send_logs(payload)
+    payload = {
+      status: 'failure',
+      error: e.message,
+      logs: @logger.logs
+    }
+    puts payload.to_json
     exit 1
   ensure
     delete_dir(@working_dir)
