@@ -6,7 +6,7 @@ require_relative '../../tasks/run_cd4pe_job.rb'
 
 describe 'run_cd4pe_job' do
   before(:all) do
-    @logger = Logger.new
+    @logger = RunCD4PEJob::Logger.new
   end
 
   before(:each) do
@@ -15,8 +15,8 @@ describe 'run_cd4pe_job' do
 
     # Ensure tests don't write to /etc/containers/certs.d
     @certs_dir = File.join(@working_dir, 'certs.d')
-    CD4PEJobRunner.send(:remove_const, :PODMAN_CERTS)
-    CD4PEJobRunner.const_set(:PODMAN_CERTS, @certs_dir)
+    RunCD4PEJob::CD4PEJobRunner.send(:remove_const, :PODMAN_CERTS)
+    RunCD4PEJob::CD4PEJobRunner.const_set(:PODMAN_CERTS, @certs_dir)
 
     @web_ui_endpoint = 'https://testtest.com'
     @job_token = 'alksjdbhfnadhsbf'
@@ -38,7 +38,7 @@ describe 'run_cd4pe_job' do
   describe 'cd4pe_job_helper::get_runtime' do
     it 'Detects podman as the available runtime.' do
       test_container_image = 'puppetlabs/test:10.0.1'
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
 logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       expect(job_helper.get_runtime).to eq('podman')
     end
@@ -48,7 +48,7 @@ logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
     let(:test_container_image) { 'puppetlabs/test:10.0.1' }
 
     it 'Generates a podman pull command.' do
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, job_owner: @job_owner, job_instance_id: @job_instance_id,
 logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       podman_pull_command = job_helper.get_image_pull_cmd
       expect(podman_pull_command).to eq("podman pull #{test_container_image}")
@@ -62,7 +62,7 @@ logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
       let(:cert_b64) { Base64.encode64(cert_txt) }
 
       it 'Uses config when present for podman.' do
-        job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, image_pull_creds: creds_b64, job_owner: @job_owner,
+        job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, image_pull_creds: creds_b64, job_owner: @job_owner,
 job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
         config_json = File.join(@working_dir, '.docker', 'config.json')
         expect(File.exist?(config_json)).to be(true)
@@ -84,7 +84,7 @@ job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_cli
       user_specified_container_run_args = [arg1, arg2, arg3]
       job_type = 'unix'
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, container_run_args: user_specified_container_run_args,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_image: test_container_image, container_run_args: user_specified_container_run_args,
 job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
       podman_run_command = job_helper.get_container_run_cmd(test_manifest_type)

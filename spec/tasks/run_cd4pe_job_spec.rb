@@ -6,7 +6,7 @@ require_relative '../../tasks/run_cd4pe_job.rb'
 
 describe 'run_cd4pe_job' do
   before(:all) do
-    @logger = Logger.new
+    @logger = RunCD4PEJob::Logger.new
   end
 
   before(:each) do
@@ -15,8 +15,8 @@ describe 'run_cd4pe_job' do
 
     # Ensure tests don't write to /etc/docker/certs.d
     @certs_dir = File.join(@working_dir, 'certs.d')
-    CD4PEJobRunner.send(:remove_const, :DOCKER_CERTS)
-    CD4PEJobRunner.const_set(:DOCKER_CERTS, @certs_dir)
+    RunCD4PEJob::CD4PEJobRunner.send(:remove_const, :DOCKER_CERTS)
+    RunCD4PEJob::CD4PEJobRunner.const_set(:DOCKER_CERTS, @certs_dir)
 
     @web_ui_endpoint = 'https://testtest.com'
     @job_token = 'alksjdbhfnadhsbf'
@@ -41,7 +41,7 @@ describe 'run_cd4pe_job' do
 
       params = { 'env_vars' => user_specified_env_vars }
 
-      set_job_env_vars(params)
+      RunCD4PEJob::Task.new.send(:set_job_env_vars, params)
 
       expect(ENV['TEST_VAR_ONE']).to eq('hello!')
       expect(ENV['TEXT_VAR_TWO']).to eq('yellow-bird')
@@ -56,62 +56,62 @@ describe 'run_cd4pe_job' do
       expect(File.exist?(test_dir)).to be(false)
 
       # create dir and validate it exists
-      make_dir(test_dir)
+      RunCD4PEJob::Task.new.send(:make_dir, test_dir)
       expect(File.exist?(test_dir)).to be(true)
 
       # attempt to create again to validate it does not throw
-      make_dir(test_dir)
+      RunCD4PEJob::Task.new.send(:make_dir, test_dir)
     end
   end
 
   describe 'get_combined_exit_code' do
     it('is 0 if job and after_job_success are 0') do
       output = { job: { exit_code: 0 }, after_job_success: { exit_code: 0 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(0)
     end
 
     it('is 1 if job or after_job_success are not 0') do
       output = { job: { exit_code: 1 }, after_job_success: { exit_code: 0 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 125 }, after_job_success: { exit_code: 0 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 0 }, after_job_success: { exit_code: 1 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 0 }, after_job_success: { exit_code: 125 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 1 }, after_job_success: { exit_code: 125 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
     end
 
     it('is 1 if job or after_job_failure are not 0') do
       output = { job: { exit_code: 1 }, after_job_failure: { exit_code: 0 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 125 }, after_job_failure: { exit_code: 0 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 0 }, after_job_failure: { exit_code: 1 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 0 }, after_job_failure: { exit_code: 125 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
 
       output = { job: { exit_code: 1 }, after_job_failure: { exit_code: 125 } }
-      test_code = get_combined_exit_code(output)
+      test_code = RunCD4PEJob::Task.new.send(:get_combined_exit_code, output)
       expect(test_code).to eq(1)
     end
   end
@@ -131,7 +131,7 @@ describe 'run_cd4pe_job' do
         "#{key3}=#{value3}",
       ]
 
-      parsed_args = parse_args(args)
+      parsed_args = RunCD4PEJob::Task.new.send(:parse_args, args)
 
       expect(parsed_args[key1]).to eq(value1)
       expect(parsed_args[key2]).to eq(value2)
@@ -146,14 +146,14 @@ describe 'run_cd4pe_job' do
       arg3 = '--whatever=isclever'
       user_specified_container_run_args = [arg1, arg2, arg3]
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_run_args: user_specified_container_run_args, job_owner: @job_owner,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_run_args: user_specified_container_run_args, job_owner: @job_owner,
 job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
       expect(job_helper.container_run_args).to eq("#{arg1} #{arg2} #{arg3}")
     end
 
     it 'Sets the HOME and REPO_DIR env vars' do
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
 cd4pe_client: @cd4pe_client)
 
       expect(!ENV['HOME'].nil?).to be(true)
@@ -164,7 +164,7 @@ end
 
 describe 'cd4pe_job_helper::run_job' do
   before(:all) do
-    @logger = Logger.new
+    @logger = RunCD4PEJob::Logger.new
     @working_dir = File.join(Dir.getwd, 'test_working_dir')
     cd4pe_job_dir = File.join(@working_dir, 'cd4pe_job')
     jobs_dir = File.join(cd4pe_job_dir, 'jobs')
@@ -207,7 +207,7 @@ describe 'cd4pe_job_helper::run_job' do
     File.write(@job_script, "echo \"#{expected_output}\"")
     File.write(@after_job_success_script, "echo \"#{after_job_success_message}\"")
 
-    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
+    job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
 cd4pe_client: @cd4pe_client)
     output = job_helper.run_job
 
@@ -225,7 +225,7 @@ cd4pe_client: @cd4pe_client)
       File.write(@job_script, "$ErrorActionPreference = 'Stop'; this command does not exist")
       File.write(@after_job_failure_script, "echo \"#{after_job_failure_message}\"")
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
 cd4pe_client: @cd4pe_client)
       output = job_helper.run_job
 
@@ -238,7 +238,7 @@ cd4pe_client: @cd4pe_client)
       File.write(@job_script, 'this command does not exist')
       File.write(@after_job_failure_script, "echo \"#{after_job_failure_message}\"")
 
-      job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
+      job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
 cd4pe_client: @cd4pe_client)
       output = job_helper.run_job
 
@@ -252,7 +252,7 @@ cd4pe_client: @cd4pe_client)
   it 'Fails the job if the job script fails' do
     File.write(@job_script, 'exit 1;')
 
-    job_helper = CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
+    job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, job_owner: @job_owner, job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets,
 cd4pe_client: @cd4pe_client)
     output = job_helper.run_job
 
@@ -275,7 +275,7 @@ describe 'cd4pe_job_helper::unzip' do
   it 'unzips a single file tar.gz' do
     single_file_tar = File.join(@test_tar_files_dir, 'gzipSingleFileTest.tar.gz')
     single_file = File.join(@working_dir, 'gzipSingleFileTest')
-    GZipHelper.unzip(single_file_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(single_file_tar, @working_dir)
 
     expect(File.exist?(single_file)).to be(true)
 
@@ -286,7 +286,7 @@ describe 'cd4pe_job_helper::unzip' do
   it 'unzips a single level directory tar.gz' do
     single_level_dir_tar = File.join(@test_tar_files_dir, 'gzipSingleLevelDirectoryTest.tar.gz')
     single_level_dir = File.join(@working_dir, 'gzipSingleLevelDirectoryTest')
-    GZipHelper.unzip(single_level_dir_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(single_level_dir_tar, @working_dir)
 
     expect(File.exist?(single_level_dir)).to be(true)
     test_file_1 = File.join(single_level_dir, 'testFile1')
@@ -304,7 +304,7 @@ describe 'cd4pe_job_helper::unzip' do
     multi_level_dir_tar = File.join(@test_tar_files_dir, 'gzipMultiLevelDirectoryTest.tar.gz')
     multi_level_dir = File.join(@working_dir, 'gzipMultiLevelDirectoryTest')
     sub_dir = File.join(multi_level_dir, 'subDir')
-    GZipHelper.unzip(multi_level_dir_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(multi_level_dir_tar, @working_dir)
 
     # root dir
     expect(File.exist?(multi_level_dir)).to be(true)
@@ -341,7 +341,7 @@ describe 'cd4pe_job_helper::unzip' do
       executable = "powershell \"& {&'#{filePath}'}\""
     end
 
-    GZipHelper.unzip(executable_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(executable_tar, @working_dir)
 
     output = ''
     exit_code = 0
@@ -358,7 +358,7 @@ describe 'cd4pe_job_helper::unzip' do
   it 'unzips a file with a filename > 100 characters' do
     single_level_dir_tar = File.join(@test_tar_files_dir, 'long_file_name.tar.gz')
     single_level_dir = File.join(@working_dir, 'long_file_name')
-    GZipHelper.unzip(single_level_dir_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(single_level_dir_tar, @working_dir)
 
     expect(File.exist?(single_level_dir)).to be(true)
     test_file_1 = File.join(single_level_dir,
@@ -369,7 +369,7 @@ describe 'cd4pe_job_helper::unzip' do
   it 'unzips a file with PAX Headers' do
     single_level_dir_tar = File.join(@test_tar_files_dir, 'with_pax_headers.tar.gz')
     single_level_dir = File.join(@working_dir, 'cd4pe_job')
-    GZipHelper.unzip(single_level_dir_tar, @working_dir)
+    RunCD4PEJob::GZipHelper.unzip(single_level_dir_tar, @working_dir)
 
     expect(File.exist?(single_level_dir)).to be(true)
     test_file_1 = File.join(single_level_dir,
