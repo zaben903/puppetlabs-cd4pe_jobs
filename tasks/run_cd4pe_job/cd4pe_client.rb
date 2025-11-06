@@ -37,6 +37,23 @@ class CD4PEClient
     post('/ajax', payload)
   end
 
+  # Send job output to CD4PE
+  #
+  # @param output [Hash] Job output payload
+  #
+  # @return [Net::HTTPResponse] HTTP response
+  def send_job_output(output)
+    payload = {
+      op: 'SavePuppetAgentJobOutput',
+      content: {
+        jobInstanceId: @job_instance_id,
+        output:,
+      },
+    }
+
+    post('/ajax', payload)
+  end
+
   # Get job script and control repository
   #
   # @param job_instance_id [String] Job instance ID
