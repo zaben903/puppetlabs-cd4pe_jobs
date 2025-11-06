@@ -5,7 +5,7 @@ require 'time'
 module RunCD4PEJob
   # Class to track logs and timestamps. To be returned as part of the Bolt log output
   #
-  # @attr_reader logs [Array<Hash<Symbol => String>>] logs that haven't been flushed yet
+  # @attr_reader logs [Array<Hash<Symbol => String>>]
   class Logger
     attr_reader :logs
 

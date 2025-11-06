@@ -9,8 +9,11 @@ module RunCD4PEJob
     SYMLINK_SYMBOL = '2'
     PAX_HEADER = 'x'
 
+    # Unzip tar.gz
+    #
+    # @param zipped_file_path [String] path to the tar.gz file
+    # @param destination_path [String] path to extract the contents to
     def self.unzip(zipped_file_path, destination_path)
-      # Unzip tar.gz
       Gem::Package::TarReader.new(Zlib::GzipReader.open(zipped_file_path)) do |tar|
         dest = nil
         tar.each do |entry|

@@ -19,6 +19,7 @@ module RunCD4PEJob
       @logger = Logger.new
     end
 
+    # Main entry point for the task
     def run
       kernel = Facter.value(:kernel)
       windows_job = kernel == 'windows'
@@ -45,7 +46,6 @@ module RunCD4PEJob
         job_instance_id: params['job_instance_id'],
         logger: @logger,
       )
-      @logger.cd4pe_client = cd4pe_client
       set_job_env_vars(params)
       set_job_env_secrets(params['secrets'])
 
@@ -88,6 +88,7 @@ module RunCD4PEJob
 
   module_function
 
+  # @return [Hash<String, String>]
   def parse_args(argv)
     params = {}
     argv.each do |arg|
@@ -99,6 +100,7 @@ module RunCD4PEJob
     params
   end
 
+  # @return [Integer]
   def get_combined_exit_code(output)
     job = output[:job]
     after_job_success = output[:after_job_success]

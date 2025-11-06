@@ -75,19 +75,23 @@ module RunCD4PEJob
       set_repo_dir_env_var
     end
 
+    # When the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
+    # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
     def set_home_env_var
-      # when the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
-      # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
       return if @windows_job
       # if not windows, we must use a ruby solution to ensure cross-system compatibility.
       # $HOME is set by default on windows.
       ENV['HOME'] = Etc.getpwuid.dir
     end
 
+    # Set REPO_DIR env var to point to the local control repo dir
     def set_repo_dir_env_var
       ENV['REPO_DIR'] = @local_repo_dir
     end
 
+    # Download job script and control repo from CD4PE and unzip to working dir
+    #
+    # @return [String] path to the downloaded tar.gz file
     def get_job_script_and_control_repo
       @logger.log('Downloading job scripts and control repo from CD4PE.')
       target_file = File.join(@working_dir, 'cd4pe_job.tar.gz')
@@ -117,6 +121,9 @@ module RunCD4PEJob
       target_file
     end
 
+    # Run the job manifest
+    #
+    # @return [Hash<Symbol => String>]
     def run_job
       @logger.log("Running job instance #{@job_instance_id}.")
 
@@ -131,6 +138,9 @@ module RunCD4PEJob
       combined_result
     end
 
+    # Combined result of job and follow-up script (if any)
+    #
+    # @return [Hash<Symbol => String>]
     def on_job_complete(result, next_manifest_type)
       output = {}
       output[:job] = {
@@ -157,6 +167,11 @@ module RunCD4PEJob
       output
     end
 
+    # Execute the specified manifest type
+    #
+    # @param manifest_type [String] the type of manifest to execute
+    #
+    # @return [Hash<Symbol => Integer, String>]
     def execute_manifest(manifest_type)
       @logger.log("Executing #{manifest_type} manifest.")
       result = {}
@@ -176,6 +191,7 @@ module RunCD4PEJob
       result
     end
 
+    # @return [Hash<Symbol => Integer, String>]
     def run_with_system(manifest_type)
       local_job_script = File.join(@local_jobs_dir, manifest_type)
 
@@ -187,6 +203,7 @@ module RunCD4PEJob
       run_system_cmd(cmd_to_execute)
     end
 
+    # @return [String]
     def get_image_pull_cmd
       image = @image_repo.nil? ? @container_image : "#{@image_repo}/#{@container_image}"
       if @image_pull_config.nil?
@@ -212,6 +229,9 @@ module RunCD4PEJob
       @logger.log("Unable to update image #{@container_image}, falling back to local image.")
     end
 
+    # Generates the container run command
+    #
+    # @return [String]
     def get_container_run_cmd(manifest_type)
       suffix = (@runtime == 'podman') ? ':z' : ''
       repo_volume_mount = "\"#{@local_repo_dir}:/repo#{suffix}\""
@@ -220,6 +240,9 @@ module RunCD4PEJob
       "#{@runtime} run --rm #{@container_run_args} #{get_container_secrets_cmd} -v #{repo_volume_mount} -v #{scripts_volume_mount} #{@container_image} #{container_bash_script}"
     end
 
+    # Generates the container secrets command
+    #
+    # @return [String]
     def get_container_secrets_cmd
       return '' if @secrets.nil?
 
@@ -228,6 +251,9 @@ module RunCD4PEJob
       end
     end
 
+    # Detects the container runtime to use
+    #
+    # @return [String, nil]
     def get_runtime
       return nil unless @containerized_job
 
@@ -254,11 +280,18 @@ module RunCD4PEJob
       end
     end
 
+    # @return [Hash<Symbol => Integer, String>]
     def run_in_container(manifest_type)
       cmd = get_container_run_cmd(manifest_type)
       run_system_cmd(cmd)
     end
 
+    # Run a system command and return the output
+    #
+    # @param cmd [String] command to run
+    # @param log_output [Boolean] whether to log the command being run
+    #
+    # @return [Hash<Symbol => Integer, String>]
     def run_system_cmd(cmd, log_output = true)
       @logger.log("Executing system command: #{cmd}") unless !log_output
       output, wait_thr = Open3.capture2e(cmd)
@@ -267,6 +300,11 @@ module RunCD4PEJob
       { exit_code:, message: scrub_secrets(output) }
     end
 
+    # Scrub secrets from command output
+    #
+    # @param cmd_output [String] command output to scrub
+    #
+    # @return [String]
     def scrub_secrets(cmd_output)
       return cmd_output if @secrets.nil? || @secrets.empty? || blank?(cmd_output)
 
@@ -286,6 +324,7 @@ module RunCD4PEJob
       cmd_output.gsub(%r{(#{regex.flatten.join("|")})}, redacted_value)
     end
 
+    # @return [Boolean]
     def blank?(str)
       str.nil? || str.empty?
     end
