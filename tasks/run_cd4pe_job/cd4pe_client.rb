@@ -32,7 +32,9 @@ class CD4PEClient
       },
     }
 
-    post('/ajax', payload)
+    res = post('/ajax', payload)
+    puts "SENT LOGS RESPONSE: #{res.code} #{res.body}"
+    res
   end
 
   # Get job script and control repository
