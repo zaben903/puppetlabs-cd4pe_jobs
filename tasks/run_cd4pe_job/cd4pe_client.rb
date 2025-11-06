@@ -166,8 +166,8 @@ class CD4PEClient
   def headers
     @headers ||= {
       'Content-Type'  => 'application/json',
-      'Authorization' => @job_token,
-      'Accept-Encoding' => 'identity'
+      'Authorization' => @job_token
+      # 'Accept-Encoding' => 'identity'
     }
   end
 end
