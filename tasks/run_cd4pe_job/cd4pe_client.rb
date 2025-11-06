@@ -70,27 +70,6 @@ class CD4PEClient
     request!(:get, "#{path}#{query_string}")
   end
 
-  # Net::HTTP connection
-  #
-  # @return [Net::HTTP] HTTP connection
-  def http
-    return @http if @http
-
-    @http = Net::HTTP.new(@base_uri.host, @base_uri.port)
-    if @base_uri.scheme == 'https'
-      @http.use_ssl = true
-      @http.verify_mode = OpenSSL::SSL::VERIFY_PEER
-      unless @ca_cert_file.nil?
-        store = OpenSSL::X509::Store.new
-        store.set_default_paths
-        store.add_file(@ca_cert_file)
-        @http.cert_store = store
-      end
-    end
-    @http.read_timeout = get_timeout
-    @http
-  end
-
   # Make a HTTP request
   #
   # @param type [Symbol] HTTP method
@@ -106,19 +85,19 @@ class CD4PEClient
         @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
         attempts += 1
 
-        http.start unless http.started?
-        request = case type
-                  when :get
-                    http.get(request_path.request_uri, headers)
-                  when :post
-                    http.post(request_path.request_uri, payload.to_json, headers)
-                  else
-                    raise StandardError, "cd4pe_client#request! called with invalid request type #{type}"
-                  end
+        request = Net::HTTP.start(@base_uri.host, @base_uri.port, **http_args) do |http|
+          case type
+          when :get
+            http.get(request_path.request_uri, headers)
+          when :post
+            http.post(request_path.request_uri, payload.to_json, headers)
+          else
+            raise StandardError, "cd4pe_client#request! called with invalid request type #{type}"
+          end
+        end
 
         case request
         when Net::HTTPSuccess, Net::HTTPRedirection
-          http.finish
           return request
         when Net::HTTPInternalServerError
           if attempts < MAX_ATTEMPTS
@@ -140,12 +119,29 @@ class CD4PEClient
       rescue StandardError => e
         @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
         raise e
-      ensure
-        if attempts >= MAX_ATTEMPTS && http.started?
-          http.finish
-        end
       end
     end
+  end
+
+  # Net::HTTP connection arguments
+  #
+  # @return [Hash] HTTP connection arguments
+  def http_args
+    return @http_args if @http_args
+
+    @http_args = {}
+    if @base_uri.scheme == 'https'
+      @http_args[:use_ssl] = true
+      @http_args[:verify_mode] = OpenSSL::SSL::VERIFY_PEER
+      unless @ca_cert_file.nil?
+        store = OpenSSL::X509::Store.new
+        store.set_default_paths
+        store.add_file(@ca_cert_file)
+        @http_args[:cert_store] = store
+      end
+    end
+    @http_args[:read_timeout] = get_timeout
+    @http_args
   end
 
   # @return [Integer] HTTP read timeout in seconds
