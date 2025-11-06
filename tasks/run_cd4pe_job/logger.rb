@@ -39,13 +39,6 @@ class Logger
 
   # Attempt to flush logs to CD4PE
   def flush!
-    @mutex.synchronize do
-      puts @logs.to_json
-      @logs = []
-    end
-    return
-    # TESTING ABOVE THIS POINT
-
     return if @logs.empty?
     if @cd4pe_client.nil?
       @mutex.synchronize do
