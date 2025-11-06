@@ -82,7 +82,7 @@ class CD4PEClient
     attempts = 0
     while attempts < MAX_ATTEMPTS
       begin
-        @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http.read_timeout} seconds")
+        @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http_args[:read_timeout]} seconds")
         attempts += 1
 
         request = Net::HTTP.start(@base_uri.host, @base_uri.port, **http_args) do |http|
