@@ -296,7 +296,7 @@ module RunCD4PEJob
     # @return [Hash<Symbol => Integer, String>]
     def run_system_cmd(cmd, log_output = true)
       @logger.log("Executing system command: #{cmd}") unless !log_output
-      output, wait_thr = Open3.capture2e(cmd)
+      output, wait_thr = Open3.capture2e(cmd, external_encoding: 'UTF-8')
       exit_code = wait_thr.exitstatus
 
       { exit_code:, message: scrub_secrets(output) }
