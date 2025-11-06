@@ -161,5 +161,8 @@ end
 
 # This block will only be invoked if this file is executed. Will NOT execute when 'required' (ie. for testing the contained classes)
 if __FILE__ == $PROGRAM_NAME
-  RunCD4PEJob::Task.new.run
+  # RunCD4PEJob::Task.new.run
+  # DEBUGGING
+  puts "Default external encoding: #{Encoding.default_external}, Default internal encoding: #{Encoding.default_internal || 'nil'}"
+  exit 1
 end

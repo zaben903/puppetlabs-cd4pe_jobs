@@ -149,7 +149,7 @@ describe 'run_cd4pe_job' do
       job_helper = RunCD4PEJob::CD4PEJobRunner.new(windows_job: @windows_job, working_dir: @working_dir, container_run_args: user_specified_container_run_args, job_owner: @job_owner,
 job_instance_id: @job_instance_id, logger: @logger, secrets: @secrets, cd4pe_client: @cd4pe_client)
 
-      expect(job_helper.container_run_args).to eq("#{arg1} #{arg2} #{arg3}")
+      expect(job_helper.instance_variable_get(:@container_run_args)).to eq("#{arg1} #{arg2} #{arg3}")
     end
 
     it 'Sets the HOME and REPO_DIR env vars' do

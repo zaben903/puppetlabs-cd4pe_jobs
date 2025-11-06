@@ -8,17 +8,6 @@ module RunCD4PEJob
   class CD4PEJobRunner
     include RunCD4PEJob
 
-    attr_reader :container_run_args
-
-    MANIFEST_TYPE = {
-      JOB: 'JOB',
-      AFTER_JOB_SUCCESS: 'AFTER_JOB_SUCCESS',
-      AFTER_JOB_FAILURE: 'AFTER_JOB_FAILURE'
-    }.freeze
-
-    DOCKER_CERTS = '/etc/docker/certs.d'
-    PODMAN_CERTS = '/etc/containers/certs.d'
-
     def initialize(working_dir:, job_owner:, job_instance_id:, logger:, secrets:, cd4pe_client:, windows_job: false, ca_cert_file: nil, container_image: nil, container_run_args: nil,
                   image_pull_creds: nil)
       @logger = logger
@@ -143,6 +132,15 @@ module RunCD4PEJob
     end
 
     private
+
+    MANIFEST_TYPE = {
+      JOB: 'JOB',
+      AFTER_JOB_SUCCESS: 'AFTER_JOB_SUCCESS',
+      AFTER_JOB_FAILURE: 'AFTER_JOB_FAILURE'
+    }.freeze
+
+    DOCKER_CERTS = '/etc/docker/certs.d'
+    PODMAN_CERTS = '/etc/containers/certs.d'
 
     # When the puppet orchestrator runs a Bolt task, it does so as a user without $HOME set.
     # We need to ensure $HOME is set so jobs that rely on this env var can succeed.
