@@ -28,13 +28,13 @@ class CD4PEClient
       op: 'SavePuppetAgentJobOutput',
       content: {
         jobInstanceId: @job_instance_id,
-        output: messages,
+        output: {
+          logs: messages,
+        },
       },
     }
 
-    res = post('/ajax', payload)
-    puts "SENT LOGS RESPONSE: #{res.code} #{res.body}"
-    res
+    post('/ajax', payload)
   end
 
   # Get job script and control repository
@@ -83,10 +83,10 @@ class CD4PEClient
     request_path = URI.parse("#{@base_uri.to_s.delete_suffix('/')}#{path}")
     attempts = 0
     while attempts < MAX_ATTEMPTS
-      begin
-        @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http_args[:read_timeout]} seconds")
-        attempts += 1
+      @logger.log("cd4pe_client: requesting #{type} #{request_path.path} with read timeout: #{http_args[:read_timeout]} seconds")
+      attempts += 1
 
+      begin
         request = Net::HTTP.start(@base_uri.host, @base_uri.port, **http_args) do |http|
           case type
           when :get
@@ -97,22 +97,6 @@ class CD4PEClient
             raise StandardError, "cd4pe_client#request! called with invalid request type #{type}"
           end
         end
-
-        case request
-        when Net::HTTPSuccess, Net::HTTPRedirection
-          return request
-        when Net::HTTPInternalServerError
-          if attempts < MAX_ATTEMPTS
-            sleep(3)
-            next
-          end
-
-          raise StandardError, "Request error: #{request.code} #{request.body}"
-        else
-          error = "Request error: #{request.code} #{request.body}"
-          @logger.log(error)
-          raise StandardError, error
-        end
       rescue SocketError => e
         raise StandardError, "Could not connect to the CD4PE service at #{@base_uri.host}: #{e.inspect}"
       rescue Net::ReadTimeout => e
@@ -121,6 +105,22 @@ class CD4PEClient
       rescue StandardError => e
         @logger.log("Failed to #{type} #{request_path}. #{e.message}.")
         raise e
+      end
+
+      case request
+      when Net::HTTPSuccess, Net::HTTPRedirection
+        return request
+      when Net::HTTPInternalServerError
+        if attempts < MAX_ATTEMPTS
+          sleep(3)
+          next
+        end
+
+        raise StandardError, "Request error: #{request.code} #{request.body}"
+      else
+        error = "Request error: #{request.code} #{request.body}"
+        @logger.log(error)
+        raise StandardError, error
       end
     end
   end
