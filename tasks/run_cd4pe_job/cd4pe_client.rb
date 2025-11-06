@@ -109,9 +109,9 @@ class CD4PEClient
         http.start unless http.started?
         request = case type
                   when :get
-                    http.get_response(request_path.to_s, headers)
+                    http.get(request_path.request_uri, headers)
                   when :post
-                    http.post(request_path.to_s, payload.to_json, headers)
+                    http.post(request_path.request_uri, payload.to_json, headers)
                   else
                     raise StandardError, "cd4pe_client#request! called with invalid request type #{type}"
                   end
